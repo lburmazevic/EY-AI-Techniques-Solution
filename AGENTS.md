@@ -106,6 +106,7 @@ Use one role per task whenever possible.
 - Python 3.10+ preferred
 - Use a virtual environment (`venv` or `conda`)
 - Track dependencies in `requirements.txt`
+- Keep `requirements.txt` updated every time new code introduces or changes dependencies
 
 ### Coding conventions
 - Follow PEP 8 and readable function naming
@@ -174,6 +175,14 @@ Before final submission, the integrated system must demonstrate:
   - assumptions made
   - quick validation steps
 - Escalate to the team when trade-offs affect fairness, threshold policy, or model interpretability.
+
+## Notebook Writing Style (Project Rule)
+
+- Write notebook text from a student perspective.
+- Keep markdown concise and practical.
+- Avoid first-person references to AI/model/assistant authorship.
+- Avoid numbered walkthroughs unless explicitly requested.
+- Prefer short section headers with brief context paragraphs.
 
 ---
 
