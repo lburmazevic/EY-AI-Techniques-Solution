@@ -1,6 +1,5 @@
 pandas
 numpy
-scikit-learn
 matplotlib
 seaborn
 plotly
@@ -8,4 +7,3 @@ chromadb
 pypdf
 sentence-transformers
 tqdm
-shap
