@@ -7,5 +7,5 @@ chromadb
 pypdf
 sentence-transformers
 tqdm
-google-genai
+ollama
 streamlit
