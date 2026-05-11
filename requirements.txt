@@ -8,3 +8,4 @@ pypdf
 sentence-transformers
 tqdm
 google-genai
+streamlit
