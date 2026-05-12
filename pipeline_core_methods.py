@@ -68,13 +68,19 @@ def rank_calls_for_sp_query(
     strong_hit_threshold: float,
     evidence_per_call: int,
     top_k_calls: int,
+    progress_callback=None,
 ) -> Dict:
     by_call: Dict[str, Dict] = {}
     raw_hits = 0
 
     query_texts = sp.get("chunks") or [sp["text"]]
 
+    total_chunks = len(query_texts)
+
     for chunk_idx, sp_chunk in enumerate(query_texts):
+        if progress_callback is not None:
+            progress_callback(chunk_idx, total_chunks)
+
         result = collection.query(
             query_texts=[sp_chunk],
             n_results=n_results,
@@ -137,6 +143,9 @@ def rank_calls_for_sp_query(
         )
 
     ranked = sorted(ranked, key=lambda x: x["final_score"], reverse=True)
+
+    if progress_callback is not None:
+        progress_callback(total_chunks, total_chunks)
 
     return {
         "sp_id": sp["sp_id"],
