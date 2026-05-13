@@ -22,3 +22,20 @@
 # Python Environment Rule
 
 Use the project's bundled virtual environment (`.venv`) for every Python operation (commands, scripts, tools, linting, and type checking).
+
+---
+
+# Python & Markdown Change Rule
+
+After every Python-related change (including `.py` and `.ipynb` files), run:
+
+* `poe check-py`
+
+After every documentation-related change (including `.md` files), run:
+
+* `poe check-md`
+
+Before committing, run the full formatting/check workflow:
+
+* `poe fmt`
+* `poe check`
