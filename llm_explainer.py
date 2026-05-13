@@ -51,6 +51,57 @@ def _build_payload(strategic_plan: Dict) -> Dict:
     }
 
 
+def _normalize_citations(citations) -> list[Dict]:
+    if not isinstance(citations, list):
+        return []
+
+    normalized = []
+    for item in citations:
+        if not isinstance(item, dict):
+            continue
+        source_file = item.get("source_file")
+        if not source_file:
+            continue
+        normalized.append({"source_file": source_file, "page": item.get("page")})
+    return normalized
+
+
+def _enforce_min_citations(structured: Dict, strategic_plan: Dict, min_citations_per_call: int) -> Dict:
+    calls = structured.get("top_calls")
+    source_calls = strategic_plan.get("top_calls", [])
+    if not isinstance(calls, list):
+        return structured
+
+    for idx, call in enumerate(calls):
+        if not isinstance(call, dict):
+            continue
+
+        citations = _normalize_citations(call.get("citations", []))
+        seen = {(c.get("source_file"), c.get("page")) for c in citations}
+
+        source_evidence = []
+        if idx < len(source_calls):
+            source_evidence = source_calls[idx].get("xai", {}).get("supporting_chunks", [])
+
+        for ev in source_evidence:
+            source_file = ev.get("source_file")
+            page = ev.get("page")
+            key = (source_file, page)
+            if not source_file or key in seen:
+                continue
+            citations.append({"source_file": source_file, "page": page})
+            seen.add(key)
+            if len(citations) >= min_citations_per_call:
+                break
+
+        if len(citations) < min_citations_per_call:
+            call["confidence"] = "Low"
+
+        call["citations"] = citations
+
+    return structured
+
+
 def _build_prompt(payload: Dict, min_citations_per_call: int = 2, language: str = "English") -> str:
     schema = {
         "sp_id": "string",
@@ -171,6 +222,16 @@ def _parse_llm_response(text: str) -> Dict:
             "json_block_raw": json_block,
         }
 
+    # If wrappers are partially followed, still try to parse JSON block.
+    if json_start != -1 and json_end != -1:
+        json_block = text[json_start + len("<JSON>") : json_end].strip()
+        parsed = json.loads(json_block)
+        return {
+            "json": parsed,
+            "text": "",
+            "json_block_raw": json_block,
+        }
+
     # Fallback parser for local models that ignore wrappers
     parsed = _extract_first_json_object(text)
     text_block = text.strip()
@@ -217,27 +278,23 @@ def generate_summary(
     prompt = _build_prompt(payload, min_citations_per_call=min_citations_per_call, language=language)
 
     client = Client()
-    response = client.chat(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        options={"temperature": temperature, "num_predict": num_predict, "num_ctx": num_ctx},
-    )
+    def _chat_response_text(predict_limit: int) -> tuple[str, str]:
+        response = client.chat(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            options={"temperature": temperature, "num_predict": predict_limit, "num_ctx": num_ctx},
+        )
+        message = getattr(response, "message", None)
+        content = getattr(message, "content", "") if message is not None else ""
+        thinking = getattr(message, "thinking", "") if message is not None else ""
+        return content, thinking
 
-    message = getattr(response, "message", None)
-    response_text = getattr(message, "content", "") if message is not None else ""
-    thinking_text = getattr(message, "thinking", "") if message is not None else ""
+    response_text, thinking_text = _chat_response_text(num_predict)
     if not response_text:
         if thinking_text:
             retry_predict = max(num_predict * 2, 1200)
-            response_retry = client.chat(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                options={"temperature": temperature, "num_predict": retry_predict, "num_ctx": num_ctx},
-            )
-            retry_message = getattr(response_retry, "message", None)
-            response_text = getattr(retry_message, "content", "") if retry_message is not None else ""
+            response_text, retry_thinking = _chat_response_text(retry_predict)
             if not response_text:
-                retry_thinking = getattr(retry_message, "thinking", "") if retry_message is not None else ""
                 raise ValueError(
                     "Empty response from Ollama model after retry. "
                     f"Thinking snippet: {str(retry_thinking)[:300]}"
@@ -248,6 +305,22 @@ def generate_summary(
     try:
         parsed = _parse_llm_response(response_text)
     except Exception as first_err:
+        # First, retry a fresh generation with a larger budget for likely truncation.
+        grew_predict = max(num_predict * 2, 3000)
+        retry_text, _ = _chat_response_text(grew_predict)
+        if retry_text:
+            try:
+                parsed = _parse_llm_response(retry_text)
+                response_text = retry_text
+                return {
+                    "prompt": prompt,
+                    "raw_response_text": response_text,
+                    "structured": parsed["json"],
+                    "stakeholder_text": parsed["text"],
+                }
+            except Exception:
+                pass
+
         if max_retries <= 0:
             snippet = response_text[:800]
             raise ValueError(f"Failed to parse model response: {first_err}. Raw snippet: {snippet}") from first_err
@@ -276,6 +349,10 @@ def generate_summary(
     return {
         "prompt": prompt,
         "raw_response_text": response_text,
-        "structured": parsed["json"],
+        "structured": _enforce_min_citations(
+            structured=parsed["json"],
+            strategic_plan=strategic_plan,
+            min_citations_per_call=min_citations_per_call,
+        ),
         "stakeholder_text": parsed["text"],
     }

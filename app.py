@@ -290,6 +290,9 @@ if "upload_mode" not in st.session_state:
 if "uploaded_file_name" not in st.session_state:
     st.session_state.uploaded_file_name = None
 
+if "selected_demo_sp" not in st.session_state:
+    st.session_state.selected_demo_sp = None
+
 
 st.sidebar.header("Demo Strategic Plans")
 demo_runs = load_demo_runs()
@@ -301,7 +304,13 @@ sp_options = [
     "Politechnico_di_Milano_2023-2025.pdf",
     "Sapienza_2021_2027.pdf",
 ]
-selected_sp = st.sidebar.selectbox("Choose one SP", sp_options, index=None, placeholder="Select a strategic plan:")
+selected_sp = st.sidebar.selectbox(
+    "Choose one SP",
+    sp_options,
+    index=None,
+    placeholder="Select a strategic plan:",
+    key="selected_demo_sp",
+)
 
 if selected_sp is not None and selected_sp not in st.session_state.uploaded_runs:
     st.session_state.selected_item_id = None
@@ -317,6 +326,7 @@ if st.session_state.uploaded_runs:
         with open_col:
             label = name if st.session_state.selected_item_id != name else f"> {name}"
             if st.button(label, key=f"open_uploaded_{name}", use_container_width=True):
+                st.session_state.selected_demo_sp = None
                 st.session_state.selected_item_id = name
                 st.session_state.upload_mode = False
         with remove_col:
@@ -420,6 +430,7 @@ if show_entry_sections:
             "phase2": phase2_result,
             "phase3": st.session_state.uploaded_runs.get(item_id, {}).get("phase3"),
         }
+        st.session_state.selected_demo_sp = None
         st.session_state.selected_item_id = item_id
         st.session_state.upload_mode = False
         st.rerun()
