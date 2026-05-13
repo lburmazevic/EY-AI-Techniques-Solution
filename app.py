@@ -1,22 +1,13 @@
-import time
-import re
 import json
-import streamlit as st
-
+import re
 from pathlib import Path
 
 import chromadb
+import streamlit as st
 from chromadb.utils import embedding_functions
 
-from pipeline_core_methods import (
-    extract_uploaded_sp,
-    rank_calls_for_sp_query,
-    build_call_xai
-)
-
 from llm_explainer import generate_summary
-
-
+from pipeline_core_methods import build_call_xai, extract_uploaded_sp, rank_calls_for_sp_query
 
 st.set_page_config(
     page_title="EU Funds Matcher",
