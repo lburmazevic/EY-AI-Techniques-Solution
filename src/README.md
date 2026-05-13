@@ -1,6 +1,16 @@
-# Minimal Run Guide
+# How-To Run Guide
 
 This project runs a funding-call matching pipeline with retrieval, explainability, and optional LLM summaries.
+
+## File map and run order
+
+| Run order | File | What it does |
+| --- | --- | --- |
+| 1 | `ingest.ipynb` | Builds/updates the Chroma vector database from funding call PDFs. |
+| 2 | `query.ipynb` | Runs retrieval, ranking, XAI, and Phase 3 summary experiments. |
+| 3 | `app.py` | Launches the Streamlit interface for interactive end-to-end use. |
+| support | `pipeline_core_methods.py` | Shared core methods for cleaning, chunking, scoring, and XAI logic. |
+| support | `llm_explainer.py` | Ollama summary layer with prompt, parsing, and citation handling. |
 
 ## 1) Create and activate virtual environment
 
@@ -52,11 +62,6 @@ Open the URL shown in terminal, usually:
 ```text
 http://localhost:8501
 ```
-
-## 5) Optional notebooks (rebuild / experiments)
-
-- `ingest.ipynb` → builds/updates the Chroma database from `docs/fundingcalls/`
-- `query.ipynb` → runs retrieval, XAI, and Phase 3 summary generation
 
 ## Notes
 
