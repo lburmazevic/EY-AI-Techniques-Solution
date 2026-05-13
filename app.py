@@ -14,7 +14,6 @@ Role in the whole project:
 """
 
 import json
-import re
 from pathlib import Path
 
 import chromadb
