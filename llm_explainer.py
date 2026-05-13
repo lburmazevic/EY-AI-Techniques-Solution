@@ -1,3 +1,18 @@
+"""
+llm_explainer.py
+
+What this file contains:
+- Phase 3 summarization utilities for transforming structured evidence into stakeholder-facing output.
+- Prompt construction for grounded JSON + text responses with citation and confidence policy constraints.
+- Response parsing, recovery/retry logic, and output normalization.
+- Post-processing safeguards (including citation enforcement) before returning structured results.
+
+Role in the whole project:
+- This is the communication layer that converts analytical outputs into decision-ready briefings.
+- It preserves traceability by tying narrative claims to retrieved evidence and citations.
+- It enables reproducible, policy-constrained natural-language reporting on top of the deterministic retrieval/XAI pipeline.
+"""
+
 from __future__ import annotations
 
 import json

@@ -1,3 +1,18 @@
+"""
+pipeline_core_methods.py
+
+What this file contains:
+- Core reusable methods for PDF text cleaning and chunking.
+- Strategic-plan extraction utilities used before retrieval.
+- Retrieval aggregation/scoring logic that ranks funding calls from vector search results.
+- Explainability helpers that compute theme signals, matched themes, and key strategic gaps with recommended actions.
+
+Role in the whole project:
+- This is the analytical backbone of Phases 1 and 2.
+- It provides deterministic, model-agnostic logic for ranking and explainability, ensuring transparent and reproducible results.
+- Other components import this file to avoid duplicated logic and keep the pipeline consistent across notebooks and app execution.
+"""
+
 from __future__ import annotations
 
 import re

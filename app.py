@@ -1,3 +1,18 @@
+"""
+app.py
+
+What this file contains:
+- Streamlit user interface for the end-to-end funding-match workflow.
+- Session-state logic for demo strategic plans and uploaded strategic plans.
+- Orchestration of Phase 1 retrieval/ranking, Phase 2 explainability attachment, and Phase 3 LLM briefing generation.
+- Rendering of scores, matched themes, key gaps, supporting evidence, and stakeholder-facing summaries.
+
+Role in the whole project:
+- This is the interactive execution layer used by end users.
+- It connects the backend analytical modules (pipeline_core_methods.py and llm_explainer.py) to a reproducible UI workflow.
+- It is the final delivery surface for exploration, interpretation, and communication of results.
+"""
+
 import json
 import re
 from pathlib import Path
@@ -212,39 +227,6 @@ def attach_xai_to_phase1(sp_obj: dict, phase1_result: dict) -> dict:
         "non_empty_pages": phase1_result.get("non_empty_pages"),
         "top_calls": calls_with_xai,
     }
-
-
-def plain_briefing(phase3: dict) -> str:
-    text = (phase3.get("stakeholder_text") or "").strip()
-
-    match = re.search(r"<TEXT>(.*?)</TEXT>", text, flags=re.DOTALL | re.IGNORECASE)
-    if match:
-        text = match.group(1).strip()
-
-    text = re.sub(r"</?JSON>|</?TEXT>", "", text, flags=re.IGNORECASE).strip()
-
-    if not text:
-        structured = phase3.get("structured", {})
-        lines = []
-        executive_summary = structured.get("executive_summary")
-        if executive_summary:
-            lines.append(executive_summary)
-            lines.append("")
-
-        lines.append("Top 3 Calls")
-        for call in structured.get("top_calls", []):
-            lines.append(f"- {call.get('call_name', '')}: {call.get('why_match', '')}")
-
-        lines.append("")
-        lines.append("Recommended Focus Areas")
-        for action in structured.get("improvement_actions", []):
-            lines.append(f"- {action}")
-
-        lines.append("")
-        lines.append(f"Confidence: {structured.get('confidence', 'n/a')}")
-        text = "\n".join(lines).strip()
-
-    return text
 
 
 
