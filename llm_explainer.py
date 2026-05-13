@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import json
-from typing import Dict, List
+from typing import Dict
 
 from ollama import Client
-
 
 DEFAULT_MODEL = "qwen3:0.6b"
 DEFAULT_TEMPERATURE = 0.1
@@ -62,7 +61,7 @@ def _build_prompt(payload: Dict, min_citations_per_call: int = 2, language: str 
             {
                 "rank": "integer",
                 "call_name": "string",
-                "why_match": "2-3 sentences",
+                "why_match": "Exactly 3 sentences: (1) SP priority/theme, (2) matching call requirement/opportunity, (3) explicit alignment reasoning with evidence strength",
                 "citations": [
                     {"source_file": "string", "page": "int|null"},
                     {"source_file": "string", "page": "int|null"},
@@ -78,7 +77,15 @@ def _build_prompt(payload: Dict, min_citations_per_call: int = 2, language: str 
     instructions = f"""
 You are an executive advisor. Write in {language}.
 Use only the provided evidence. Do not invent facts.
+For each top call, explain MATCHING, not call description.
 Each top call must include at least {min_citations_per_call} citations from provided chunks.
+Each top call should include at least one citation supporting the SP-side claim and one citation supporting the call-side claim when available.
+why_match must follow this exact pattern:
+- Sentence 1: what the SP prioritizes (theme/goal).
+- Sentence 2: what the call supports/requires on that same theme.
+- Sentence 3: why this is a strong/medium/weak fit for this SP specifically.
+Do not summarize the call in isolation.
+Use comparative language: "SP emphasizes...", "The call supports...", "Therefore alignment is ... because...".
 Assign confidence as High/Medium/Low. If evidence is weak or citations are missing, downgrade confidence.
 Output MUST start with <JSON> and end with </TEXT>. Do not add any preface, code fences, or extra sections.
 Return two sections exactly:
@@ -96,7 +103,7 @@ Readable stakeholder briefing with headings:
 
     strict_example = """
 <JSON>
-{"sp_id":"...","sp_file":"...","confidence":"Medium","executive_summary":"...","top_calls":[{"rank":1,"call_name":"...","why_match":"...","citations":[{"source_file":"...","page":1},{"source_file":"...","page":2}],"confidence":"Medium"}],"improvement_actions":["..."]}
+{"sp_id":"...","sp_file":"...","confidence":"Medium","executive_summary":"...","top_calls":[{"rank":1,"call_name":"...","why_match":"SP emphasizes digital transformation and AI-enabled teaching modernization. The call explicitly funds AI/data capability building and university-industry transfer activities. Therefore this call is a medium-to-strong fit because its funded actions directly map to the SP's AI and skills priorities, though governance deliverables are less explicit in the SP.","citations":[{"source_file":"...","page":1},{"source_file":"...","page":2}],"confidence":"Medium"}],"improvement_actions":["..."]}
 </JSON>
 <TEXT>
 Top 3 Calls\n...\nWhy They Match\n...\nRecommended Focus Areas\n...\nConfidence Note\n...
