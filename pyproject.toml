@@ -1,0 +1,16 @@
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.mdformat]
+number = true
+
+[tool.poe.tasks]
+fmt-py = "ruff check --fix . && ruff format ."
+check-py = "ruff check . && ruff format --check ."
+fmt-md = "mdformat AGENTS.md docs/PLAN.md"
+check-md = "mdformat --check AGENTS.md docs/PLAN.md"
+fmt = ["fmt-py", "fmt-md"]
+check = ["check-py", "check-md"]
