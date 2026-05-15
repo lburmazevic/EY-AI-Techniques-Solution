@@ -76,6 +76,9 @@ def get_collection():
 def retrieve_and_rank_calls_for_uploaded_sp(
     sp_obj: dict,
     n_results: int = N_RESULTS,
+    strong_hit_threshold: float = STRONG_HIT_THRESHOLD,
+    evidence_per_call: int = EVIDENCE_PER_CALL,
+    top_k_calls: int = TOP_K_CALLS,
     progress_callback=None,
 ) -> dict:
     collection = get_collection()
@@ -83,9 +86,9 @@ def retrieve_and_rank_calls_for_uploaded_sp(
         collection=collection,
         sp=sp_obj,
         n_results=n_results,
-        strong_hit_threshold=STRONG_HIT_THRESHOLD,
-        evidence_per_call=EVIDENCE_PER_CALL,
-        top_k_calls=TOP_K_CALLS,
+        strong_hit_threshold=strong_hit_threshold,
+        evidence_per_call=evidence_per_call,
+        top_k_calls=top_k_calls,
         progress_callback=progress_callback,
     )
 
@@ -203,7 +206,15 @@ THEME_LEXICON = {
 
 
 
-def attach_xai_to_phase1(sp_obj: dict, phase1_result: dict) -> dict:
+def attach_xai_to_phase1(
+    sp_obj: dict,
+    phase1_result: dict,
+    xai_evidence_per_call: int = XAI_EVIDENCE_PER_CALL,
+    xai_top_themes: int = XAI_TOP_THEMES,
+    gap_min_call_signal: float = GAP_MIN_CALL_SIGNAL,
+    gap_max_sp_signal: float = GAP_MAX_SP_SIGNAL,
+    xai_max_gaps: int = XAI_MAX_GAPS,
+) -> dict:
     calls_with_xai = []
     for call in phase1_result.get("top_calls", []):
         call_copy = dict(call)
@@ -211,11 +222,11 @@ def attach_xai_to_phase1(sp_obj: dict, phase1_result: dict) -> dict:
             sp_text=sp_obj.get("text", ""),
             call_row=call_copy,
             theme_lexicon=THEME_LEXICON,
-            xai_evidence_per_call=XAI_EVIDENCE_PER_CALL,
-            xai_top_themes=XAI_TOP_THEMES,
-            gap_min_call_signal=GAP_MIN_CALL_SIGNAL,
-            gap_max_sp_signal=GAP_MAX_SP_SIGNAL,
-            xai_max_gaps=XAI_MAX_GAPS,
+            xai_evidence_per_call=xai_evidence_per_call,
+            xai_top_themes=xai_top_themes,
+            gap_min_call_signal=gap_min_call_signal,
+            gap_max_sp_signal=gap_max_sp_signal,
+            xai_max_gaps=xai_max_gaps,
         )
         calls_with_xai.append(call_copy)
 
@@ -258,6 +269,19 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+if st.session_state.get("ui_busy", False):
+    st.markdown(
+        """
+        <style>
+        [data-testid="stSidebar"] {
+            pointer-events: none;
+            opacity: 0.65;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 # Session States
 if "uploaded_runs" not in st.session_state:
     st.session_state.uploaded_runs = {}  
@@ -273,6 +297,41 @@ if "uploaded_file_name" not in st.session_state:
 
 if "selected_demo_sp" not in st.session_state:
     st.session_state.selected_demo_sp = None
+
+if "reset_demo_sp" not in st.session_state:
+    st.session_state.reset_demo_sp = False
+
+if "ui_busy" not in st.session_state:
+    st.session_state.ui_busy = False
+
+if "pending_action" not in st.session_state:
+    st.session_state.pending_action = None
+
+if "pending_analysis_file" not in st.session_state:
+    st.session_state.pending_analysis_file = None
+
+if "cfg_n_results" not in st.session_state:
+    st.session_state.cfg_n_results = N_RESULTS
+if "cfg_top_k_calls" not in st.session_state:
+    st.session_state.cfg_top_k_calls = TOP_K_CALLS
+if "cfg_strong_hit_threshold" not in st.session_state:
+    st.session_state.cfg_strong_hit_threshold = STRONG_HIT_THRESHOLD
+if "cfg_evidence_per_call" not in st.session_state:
+    st.session_state.cfg_evidence_per_call = EVIDENCE_PER_CALL
+if "cfg_xai_top_themes" not in st.session_state:
+    st.session_state.cfg_xai_top_themes = XAI_TOP_THEMES
+if "cfg_xai_evidence_per_call" not in st.session_state:
+    st.session_state.cfg_xai_evidence_per_call = XAI_EVIDENCE_PER_CALL
+if "cfg_xai_max_gaps" not in st.session_state:
+    st.session_state.cfg_xai_max_gaps = XAI_MAX_GAPS
+if "cfg_gap_min_call_signal" not in st.session_state:
+    st.session_state.cfg_gap_min_call_signal = GAP_MIN_CALL_SIGNAL
+if "cfg_gap_max_sp_signal" not in st.session_state:
+    st.session_state.cfg_gap_max_sp_signal = GAP_MAX_SP_SIGNAL
+
+if st.session_state.reset_demo_sp:
+    st.session_state.selected_demo_sp = None
+    st.session_state.reset_demo_sp = False
 
 
 st.sidebar.header("Demo Strategic Plans")
@@ -291,9 +350,14 @@ selected_sp = st.sidebar.selectbox(
     index=None,
     placeholder="Select a strategic plan:",
     key="selected_demo_sp",
+    disabled=st.session_state.ui_busy,
 )
 
-if selected_sp is not None and selected_sp not in st.session_state.uploaded_runs:
+if (
+    not st.session_state.upload_mode
+    and selected_sp is not None
+    and selected_sp not in st.session_state.uploaded_runs
+):
     st.session_state.selected_item_id = None
     st.session_state.upload_mode = False
 
@@ -306,12 +370,23 @@ if st.session_state.uploaded_runs:
         open_col, remove_col = st.sidebar.columns([0.8, 0.2])
         with open_col:
             label = name if st.session_state.selected_item_id != name else f"> {name}"
-            if st.button(label, key=f"open_uploaded_{name}", use_container_width=True):
-                st.session_state.selected_demo_sp = None
+            if st.button(
+                label,
+                key=f"open_uploaded_{name}",
+                use_container_width=True,
+                disabled=st.session_state.ui_busy,
+            ):
+                st.session_state.reset_demo_sp = True
                 st.session_state.selected_item_id = name
                 st.session_state.upload_mode = False
+                st.rerun()
         with remove_col:
-            if st.button("X", key=f"remove_uploaded_{name}", use_container_width=True):
+            if st.button(
+                "X",
+                key=f"remove_uploaded_{name}",
+                use_container_width=True,
+                disabled=st.session_state.ui_busy,
+            ):
                 del st.session_state.uploaded_runs[name]
                 if st.session_state.selected_item_id == name:
                     remaining = list(st.session_state.uploaded_runs.keys())
@@ -322,7 +397,8 @@ if st.session_state.uploaded_runs:
 else:
     st.sidebar.caption("No uploaded analyses yet.")
 
-if st.sidebar.button("Upload new file", use_container_width=True):
+if st.sidebar.button("Upload new file", use_container_width=True, disabled=st.session_state.ui_busy):
+    st.session_state.reset_demo_sp = True
     st.session_state.upload_mode = True
     st.session_state.selected_item_id = None
     st.rerun()
@@ -347,73 +423,282 @@ elif selected_sp and selected_sp in demo_runs:
 
 analysis_ready = active_run is not None
 show_entry_sections = st.session_state.upload_mode or not analysis_ready
+is_demo_view = active_source == "demo"
+show_input_controls = show_entry_sections and not is_demo_view
+
+
+def _run_pending_action(active_item_id_value, active_run_value):
+    action = st.session_state.pending_action
+    if not st.session_state.ui_busy or action is None:
+        return
+
+    try:
+        if action == "analysis":
+            pending = st.session_state.pending_analysis_file or {}
+            file_name = pending.get("name")
+            file_bytes = pending.get("bytes")
+            if not file_name or file_bytes is None:
+                raise ValueError("No uploaded file payload found for pending analysis action")
+
+            progress_text = st.empty()
+            progress_bar = st.progress(0)
+
+            def _on_progress(done: int, total: int) -> None:
+                if total <= 0:
+                    progress_bar.progress(0)
+                    progress_text.info("Preparing retrieval...")
+                    return
+
+                ratio = min(1.0, max(0.0, done / total))
+                progress_bar.progress(ratio)
+                progress_text.info(f"Retrieving chunks: {done}/{total}")
+
+            class _PendingUpload:
+                def __init__(self, name: str, payload: bytes):
+                    self.name = name
+                    self._payload = payload
+
+                def read(self):
+                    return self._payload
+
+            with st.spinner("Extracting, chunking, retrieving, and ranking..."):
+                uploaded_obj = _PendingUpload(file_name, file_bytes)
+                sp_obj = extract_uploaded_sp(
+                    uploaded_obj,
+                    size=SP_CHUNK_SIZE,
+                    overlap=SP_CHUNK_OVERLAP,
+                    min_chars=SP_MIN_CHUNK_CHARS,
+                )
+                phase1_result = retrieve_and_rank_calls_for_uploaded_sp(
+                    sp_obj,
+                    n_results=st.session_state.cfg_n_results,
+                    strong_hit_threshold=st.session_state.cfg_strong_hit_threshold,
+                    evidence_per_call=st.session_state.cfg_evidence_per_call,
+                    top_k_calls=st.session_state.cfg_top_k_calls,
+                    progress_callback=_on_progress,
+                )
+
+            progress_bar.progress(1.0)
+            progress_text.success("Retrieval completed")
+            st.success(
+                f"Done. Raw hits: {phase1_result['raw_hits']} | "
+                f"Top calls: {len(phase1_result['top_calls'])}"
+            )
+
+            st.session_state.latest_sp_obj = sp_obj
+            st.session_state.latest_phase1 = phase1_result
+
+            phase2_result = attach_xai_to_phase1(
+                sp_obj,
+                phase1_result,
+                xai_evidence_per_call=st.session_state.cfg_xai_evidence_per_call,
+                xai_top_themes=st.session_state.cfg_xai_top_themes,
+                gap_min_call_signal=st.session_state.cfg_gap_min_call_signal,
+                gap_max_sp_signal=st.session_state.cfg_gap_max_sp_signal,
+                xai_max_gaps=st.session_state.cfg_xai_max_gaps,
+            )
+            item_id = sp_obj["source_file"]
+            st.session_state.uploaded_runs[item_id] = {
+                "sp_obj": sp_obj,
+                "phase1": phase1_result,
+                "phase2": phase2_result,
+                "phase3": st.session_state.uploaded_runs.get(item_id, {}).get("phase3"),
+            }
+            st.session_state.reset_demo_sp = True
+            st.session_state.selected_item_id = item_id
+            st.session_state.upload_mode = False
+
+        elif action == "summary":
+            if active_item_id_value is None or active_run_value is None:
+                raise ValueError("No active uploaded run found for pending summary action")
+
+            phase2_result = active_run_value["phase2"]
+            with st.spinner("Generating grounded executive summary..."):
+                llm_out = generate_summary(
+                    strategic_plan=phase2_result,
+                    model=LLM_MODEL_NAME,
+                    temperature=PHASE3_TEMPERATURE,
+                    min_citations_per_call=PHASE3_MIN_CITATIONS_PER_CALL,
+                    language=PHASE3_LANGUAGE,
+                )
+
+            phase3_result = {
+                "sp_id": phase2_result.get("sp_id"),
+                "sp_file": phase2_result.get("sp_file"),
+                "model_name": LLM_MODEL_NAME,
+                "temperature": PHASE3_TEMPERATURE,
+                "structured": llm_out.get("structured", {}),
+                "stakeholder_text": llm_out.get("stakeholder_text", ""),
+                "prompt": llm_out.get("prompt", ""),
+                "raw_response_text": llm_out.get("raw_response_text", ""),
+            }
+            st.session_state.uploaded_runs[active_item_id_value]["phase3"] = phase3_result
+            st.session_state.latest_phase3 = phase3_result
+            st.success("LLM briefing generated.")
+    finally:
+        st.session_state.pending_action = None
+        st.session_state.pending_analysis_file = None
+        st.session_state.ui_busy = False
+        st.rerun()
+
+
+if st.session_state.ui_busy and st.session_state.pending_action is not None:
+    _run_pending_action(active_item_id, active_run)
 
 # Upload
-if show_entry_sections:
+if show_input_controls:
     st.subheader("Upload")
-    uploaded_file = st.file_uploader("Upload a PDF strategic plan", type=["pdf"])
+    uploaded_file = st.file_uploader(
+        "Upload a PDF strategic plan",
+        type=["pdf"],
+        disabled=st.session_state.ui_busy,
+    )
 else:
     uploaded_file = None
+
+
+if show_input_controls:
+    st.subheader("Configuration")
+    st.caption("Tune ranking and explainability thresholds before running analysis.")
+
+    h1, h2, h3 = st.columns([1.2, 3.2, 1.2])
+    h1.markdown("**Threshold Name**")
+    h2.markdown("**What it controls**")
+    h3.markdown("**Value**")
+
+    r1c1, r1c2, r1c3 = st.columns([1.2, 3.2, 1.2])
+    r1c1.code("N_RESULTS")
+    r1c2.write("How many candidate chunks are retrieved per SP chunk before call-level aggregation.")
+    r1c3.number_input(
+        "N_RESULTS",
+        min_value=10,
+        max_value=100,
+        step=5,
+        key="cfg_n_results",
+        label_visibility="collapsed",
+        disabled=st.session_state.ui_busy,
+    )
+
+    r2c1, r2c2, r2c3 = st.columns([1.2, 3.2, 1.2])
+    r2c1.code("TOP_K_CALLS")
+    r2c2.write("How many final calls are returned to the user after ranking.")
+    r2c3.number_input(
+        "TOP_K_CALLS",
+        min_value=1,
+        max_value=10,
+        step=1,
+        key="cfg_top_k_calls",
+        label_visibility="collapsed",
+        disabled=st.session_state.ui_busy,
+    )
+
+    r3c1, r3c2, r3c3 = st.columns([1.2, 3.2, 1.2])
+    r3c1.code("STRONG_HIT_THRESHOLD")
+    r3c2.write("Similarity threshold used to count strong hits in consistency scoring.")
+    r3c3.slider(
+        "STRONG_HIT_THRESHOLD",
+        min_value=0.40,
+        max_value=0.80,
+        step=0.01,
+        key="cfg_strong_hit_threshold",
+        label_visibility="collapsed",
+        disabled=st.session_state.ui_busy,
+    )
+
+    r4c1, r4c2, r4c3 = st.columns([1.2, 3.2, 1.2])
+    r4c1.code("EVIDENCE_PER_CALL")
+    r4c2.write("Number of top evidence chunks kept and displayed for each ranked call.")
+    r4c3.number_input(
+        "EVIDENCE_PER_CALL",
+        min_value=1,
+        max_value=8,
+        step=1,
+        key="cfg_evidence_per_call",
+        label_visibility="collapsed",
+        disabled=st.session_state.ui_busy,
+    )
+
+    r5c1, r5c2, r5c3 = st.columns([1.2, 3.2, 1.2])
+    r5c1.code("XAI_TOP_THEMES")
+    r5c2.write("Maximum number of matched themes shown per call in the explainability section.")
+    r5c3.number_input(
+        "XAI_TOP_THEMES",
+        min_value=2,
+        max_value=8,
+        step=1,
+        key="cfg_xai_top_themes",
+        label_visibility="collapsed",
+        disabled=st.session_state.ui_busy,
+    )
+
+    r6c1, r6c2, r6c3 = st.columns([1.2, 3.2, 1.2])
+    r6c1.code("XAI_EVIDENCE_PER_CALL")
+    r6c2.write("How many evidence chunks feed theme matching and gap extraction per call.")
+    r6c3.number_input(
+        "XAI_EVIDENCE_PER_CALL",
+        min_value=1,
+        max_value=6,
+        step=1,
+        key="cfg_xai_evidence_per_call",
+        label_visibility="collapsed",
+        disabled=st.session_state.ui_busy,
+    )
+
+    r7c1, r7c2, r7c3 = st.columns([1.2, 3.2, 1.2])
+    r7c1.code("XAI_MAX_GAPS")
+    r7c2.write("Maximum number of strategic gaps returned per call.")
+    r7c3.number_input(
+        "XAI_MAX_GAPS",
+        min_value=1,
+        max_value=8,
+        step=1,
+        key="cfg_xai_max_gaps",
+        label_visibility="collapsed",
+        disabled=st.session_state.ui_busy,
+    )
+
+    r8c1, r8c2, r8c3 = st.columns([1.2, 3.2, 1.2])
+    r8c1.code("GAP_MIN_CALL_SIGNAL")
+    r8c2.write("Minimum call-side theme signal required before a theme can be flagged as a gap.")
+    r8c3.slider(
+        "GAP_MIN_CALL_SIGNAL",
+        min_value=0.10,
+        max_value=0.40,
+        step=0.01,
+        key="cfg_gap_min_call_signal",
+        label_visibility="collapsed",
+        disabled=st.session_state.ui_busy,
+    )
+
+    r9c1, r9c2, r9c3 = st.columns([1.2, 3.2, 1.2])
+    r9c1.code("GAP_MAX_SP_SIGNAL")
+    r9c2.write("Maximum SP-side theme signal allowed when identifying underrepresented gap themes.")
+    r9c3.slider(
+        "GAP_MAX_SP_SIGNAL",
+        min_value=0.00,
+        max_value=0.25,
+        step=0.01,
+        key="cfg_gap_max_sp_signal",
+        label_visibility="collapsed",
+        disabled=st.session_state.ui_busy,
+    )
 
 
 
 
 
 # Analyze
-if show_entry_sections:
+if show_input_controls:
     st.subheader("Analyze")
     is_ready = uploaded_file is not None
 
-    if st.button("Run Analysis", type="primary", disabled=not is_ready):
-        progress_text = st.empty()
-        progress_bar = st.progress(0)
-
-        def _on_progress(done: int, total: int) -> None:
-            if total <= 0:
-                progress_bar.progress(0)
-                progress_text.info("Preparing retrieval...")
-                return
-
-            ratio = min(1.0, max(0.0, done / total))
-            progress_bar.progress(ratio)
-            progress_text.info(f"Retrieving chunks: {done}/{total}")
-
-        with st.spinner("Extracting, chunking, retrieving, and ranking..."):
-            sp_obj = extract_uploaded_sp(
-                uploaded_file,
-                size=SP_CHUNK_SIZE,
-                overlap=SP_CHUNK_OVERLAP,
-                min_chars=SP_MIN_CHUNK_CHARS,
-            )
-            phase1_result = retrieve_and_rank_calls_for_uploaded_sp(
-                sp_obj,
-                n_results=30,
-                progress_callback=_on_progress,
-            )
-
-        progress_bar.progress(1.0)
-        progress_text.success("Retrieval completed")
-
-        st.success(
-            f"Done. Raw hits: {phase1_result['raw_hits']} | "
-            f"Top calls: {len(phase1_result['top_calls'])}"
-        )
-
-    # Save in session for Step 4 (XAI + rendering)
-        st.session_state.latest_sp_obj = sp_obj
-        st.session_state.latest_phase1 = phase1_result
-
-        phase2_result = attach_xai_to_phase1(sp_obj, phase1_result)
-        item_id = sp_obj["source_file"]
-        st.session_state.uploaded_runs[item_id] = {
-            "sp_obj": sp_obj,
-            "phase1": phase1_result,
-            "phase2": phase2_result,
-            "phase3": st.session_state.uploaded_runs.get(item_id, {}).get("phase3"),
+    if st.button("Run Analysis", type="primary", disabled=st.session_state.ui_busy or not is_ready):
+        st.session_state.pending_analysis_file = {
+            "name": uploaded_file.name,
+            "bytes": uploaded_file.read(),
         }
-        st.session_state.selected_demo_sp = None
-        st.session_state.selected_item_id = item_id
-        st.session_state.upload_mode = False
+        st.session_state.ui_busy = True
+        st.session_state.pending_action = "analysis"
         st.rerun()
 
     if not is_ready:
@@ -483,29 +768,16 @@ st.subheader("Summary")
 if active_run is not None:
     phase2_result = active_run["phase2"]
 
-    if active_source == "uploaded" and st.button("Generate LLM Briefing", type="secondary"):
-        with st.spinner("Generating grounded executive summary..."):
-            llm_out = generate_summary(
-                strategic_plan=phase2_result,
-                model=LLM_MODEL_NAME,
-                temperature=PHASE3_TEMPERATURE,
-                min_citations_per_call=PHASE3_MIN_CITATIONS_PER_CALL,
-                language=PHASE3_LANGUAGE,
-            )
-
-        phase3_result = {
-            "sp_id": phase2_result.get("sp_id"),
-            "sp_file": phase2_result.get("sp_file"),
-            "model_name": LLM_MODEL_NAME,
-            "temperature": PHASE3_TEMPERATURE,
-            "structured": llm_out.get("structured", {}),
-            "stakeholder_text": llm_out.get("stakeholder_text", ""),
-            "prompt": llm_out.get("prompt", ""),
-            "raw_response_text": llm_out.get("raw_response_text", ""),
-        }
-        st.session_state.uploaded_runs[active_item_id]["phase3"] = phase3_result
-        st.session_state.latest_phase3 = phase3_result
-        st.success("LLM briefing generated.")
+    if active_source == "uploaded":
+        has_phase3 = active_run.get("phase3") is not None
+        if not has_phase3 and st.button(
+            "Generate LLM Briefing",
+            type="secondary",
+            disabled=st.session_state.ui_busy,
+        ):
+            st.session_state.ui_busy = True
+            st.session_state.pending_action = "summary"
+            st.rerun()
 
     if active_source == "demo" and active_run.get("phase3") is None:
         st.caption("No precomputed summary found for this demo strategic plan.")
