@@ -49,7 +49,16 @@ In another terminal, pull the model:
 ollama pull qwen3:0.6b
 ```
 
-## 4) Run the Streamlit app
+## 4) Run notebooks in order (top to bottom)
+
+Before launching the app, run both notebooks from the first cell to the last:
+
+- `ingest.ipynb`
+- `query.ipynb`
+
+This ensures the vector database and precomputed outputs are ready for the app.
+
+## 5) Run the Streamlit app
 
 From project root:
 
