@@ -63,6 +63,14 @@ Open the URL shown in terminal, usually:
 http://localhost:8501
 ```
 
+## 5) Optional sample uploads
+
+For convenience, sample strategic-plan PDFs are available in:
+
+- `docs/upload_examples/`
+
+You can upload those files directly in the Streamlit app to test the workflow, instead of searching for external strategic plans.
+
 ## Notes
 
 - Keep paths unchanged: `docs/`, `data/chroma/`, and `outputs/` are used directly by code.
