@@ -10,7 +10,7 @@ number = true
 [tool.poe.tasks]
 fmt-py = "ruff check --fix . && ruff format ."
 check-py = "ruff check . && ruff format --check ."
-fmt-md = "mdformat AGENTS.md docs/PLAN.md"
-check-md = "mdformat --check AGENTS.md docs/PLAN.md"
+fmt-md = "mdformat AGENTS.md README.md docs/README.md"
+check-md = "mdformat --check AGENTS.md README.md docs/README.md"
 fmt = ["fmt-py", "fmt-md"]
 check = ["check-py", "check-md"]
