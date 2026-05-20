@@ -142,7 +142,7 @@ Distributed under the MIT License. See `LICENSE` for details.
 
 - Luka Burmazevic - [@lburmazevic](https://github.com/lburmazevic)
 - Evelina Ristovska
-- Filippa Gronberg - [@gronbergfillipa](https://github.com/gronbergfillipa)
+- Filippa Gronberg - [@gronbergfilippa](https://github.com/gronbergfillipa)
 
 Project Link: <https://github.com/lburmazevic/uni-strategy-funding-matcher>
 
