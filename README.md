@@ -14,7 +14,7 @@ It was developed for the Artificial Intelligence Techniques class at LUISS Unive
 ## Team Members
 
 - [Luka Burmazevic](https://github.com/lburmazevic)
-- Evelina Ristovska
+- [Evelina Ristovska](https://github.com/evelinaristovska)
 - [Filippa Gronberg](https://github.com/gronbergfillipa)
 
 ## Table of Contents
@@ -31,14 +31,11 @@ It was developed for the Artificial Intelligence Techniques class at LUISS Unive
 
 ## About the Project
 
-The workflow links institutional strategy documents to funding calls by combining:
+This project, **Translating Italian University Strategies into Funding Opportunities**, is an AI-driven decision-support tool designed to connect institutional strategic priorities with relevant funding calls. Universities often publish broad strategic plans in natural language, while funding opportunities are distributed across complex and fragmented documentation. Our system bridges this gap by automatically identifying semantic alignment between strategic-plan content and available calls, helping stakeholders move from high-level priorities to concrete funding options.
 
-- text extraction and chunking,
-- semantic retrieval over a ChromaDB collection,
-- ranking and explainability outputs,
-- optional local LLM summaries through Ollama.
+The workflow combines document processing, semantic retrieval, and explainability. Strategic plans and funding calls are parsed and transformed into searchable text chunks, embedded using transformer-based models, and stored in a vector database for similarity-based matching. The system then ranks candidate opportunities and surfaces transparent evidence for each match, so users can understand *why* a funding call is being suggested rather than receiving opaque recommendations.
 
-The goal is to support stakeholders in quickly identifying calls that align with strategic priorities.
+To support practical use in academic and administrative contexts, the project also includes an interactive Streamlit interface and optional local LLM-generated summaries via Ollama. This enables non-technical users to explore results, inspect supporting passages, and review structured explanations quickly. Developed for the **Artificial Intelligence Techniques** course at **LUISS University** (Bachelor in Artificial Intelligence and Management), the project serves as both a technical prototype and a reproducible framework for strategy-to-funding intelligence.
 
 ## Built With
 
