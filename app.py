@@ -20,8 +20,8 @@ import chromadb
 import streamlit as st
 from chromadb.utils import embedding_functions
 
-from llm_explainer import generate_summary
-from pipeline_core_methods import build_call_xai, extract_uploaded_sp, rank_calls_for_sp_query
+from src.llm_explainer import generate_summary
+from src.pipeline_core_methods import build_call_xai, extract_uploaded_sp, rank_calls_for_sp_query
 
 st.set_page_config(
     page_title="EU Funds Matcher",
