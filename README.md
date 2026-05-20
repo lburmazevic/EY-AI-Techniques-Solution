@@ -37,6 +37,28 @@ The workflow combines document processing, semantic retrieval, and explainabilit
 
 To support practical use in academic and administrative contexts, the project also includes an interactive Streamlit interface and optional local LLM-generated summaries via Ollama. This enables non-technical users to explore results, inspect supporting passages, and review structured explanations quickly. Developed for the **Artificial Intelligence Techniques** course at **LUISS University** (Bachelor in Artificial Intelligence and Management), the project serves as both a technical prototype and a reproducible framework for strategy-to-funding intelligence.
 
+## App Preview
+
+The Streamlit app lets users upload an Italian university strategic plan, configure retrieval and explainability settings, and receive ranked funding-call matches with supporting evidence.
+
+### Upload and Configuration
+
+Users can either select a demo strategic plan or upload their own PDF. The configuration panel allows tuning of retrieval depth, number of returned calls, evidence chunks, matched themes, and gap-detection thresholds.
+
+![App Interface](assets/app_interface.png)
+
+### Ranked Funding Matches
+
+The app ranks funding opportunities using semantic similarity, coverage, and consistency scores. Each result includes matched strategic themes, recommended actions, and supporting evidence from the funding-call documents.
+
+![Results Ranking](assets/results_ranking.png)
+
+### Executive Summary
+
+The system also generates a concise executive briefing summarizing the strategic plan, the top funding matches, confidence levels, and citations.
+
+![Executive Summary](assets/executive_summary.png)
+
 ## Built With
 
 - Python
