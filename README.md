@@ -6,7 +6,6 @@
 [![Issues][issues-shield]][issues-url]
 [![MIT License][license-shield]][license-url]
 
-
 This project translates Italian university strategic plans into relevant funding opportunities using retrieval, explainability methods, and optional LLM-generated summaries.
 
 It was developed for the Artificial Intelligence Techniques class at LUISS University, within the Bachelor in Artificial Intelligence and Management.
@@ -184,7 +183,7 @@ Project Link: <https://github.com/lburmazevic/uni-strategy-funding-matcher>
 [forks-url]: https://github.com/lburmazevic/uni-strategy-funding-matcher/network/members
 [issues-shield]: https://img.shields.io/github/issues/lburmazevic/uni-strategy-funding-matcher.svg?style=for-the-badge
 [issues-url]: https://github.com/lburmazevic/uni-strategy-funding-matcher/issues
-[license-shield]: https://img.shields.io/github/license/lburmazevic/uni-strategy-funding-matcher.svg?style=for-the-badge
+[license-shield]: https://img.shields.io/github/license/lburmazevic/uni-strategy-funding-matcher?style=for-the-badge&cacheSeconds=300
 [license-url]: https://github.com/lburmazevic/uni-strategy-funding-matcher/blob/main/LICENSE
 [stars-shield]: https://img.shields.io/github/stars/lburmazevic/uni-strategy-funding-matcher.svg?style=for-the-badge
 [stars-url]: https://github.com/lburmazevic/uni-strategy-funding-matcher/stargazers
