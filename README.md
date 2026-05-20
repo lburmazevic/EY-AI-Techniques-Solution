@@ -6,6 +6,12 @@
 [![Issues][issues-shield]][issues-url]
 [![MIT License][license-shield]][license-url]
 
+## Team Members
+
+- [Luka Burmazevic](https://github.com/lburmazevic)
+- Evelina Ristovska
+- [Filippa Gronberg](https://github.com/gronbergfillipa)
+
 This project translates Italian university strategic plans into relevant funding opportunities using retrieval, explainability methods, and optional LLM-generated summaries.
 
 It was developed for the Artificial Intelligence Techniques class at LUISS University, within the Bachelor in Artificial Intelligence and Management.
